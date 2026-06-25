@@ -159,10 +159,13 @@ model Service {
   slug                  String
   description           String?
   longDescription       String?
+  coverImage            String?              // Primary/cover image URL
   images                String[]             // Array of image URLs
   basePrice             Int
   discountedPrice       Int?
   discountPercentage    Int?
+  capacity              Int?                 // guest capacity, if relevant
+  isFeatured            Boolean              @default(false)
   isActive              Boolean              @default(true)
   availability          Json?                // {daysOfWeek, blockedDates}
   duration              Int?                 // in hours

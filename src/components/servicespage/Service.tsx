@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { Star, MapPin, BadgeCheck, SlidersHorizontal, Search } from "lucide-react";
 
 interface ServiceItem {
   id: number;
@@ -16,66 +15,58 @@ interface ServiceItem {
   reviewCount: number;
   basePrice: number;
   discountedPrice: number | null;
+  capacity: number | null;
+  isFeatured: boolean;
   badge: string;
+  coverImage: string | null;
   image: string | null;
 }
 
 const badgeConfig: Record<string, string> = {
-  AVAILABLE: "bg-green-600 text-white",
-  LIMITED: "bg-amber-700 text-white",
-  BOOKED: "bg-red-600 text-white",
+  AVAILABLE: "bg-emerald-600 text-white",
+  LIMITED: "bg-amber-600 text-white",
+  BOOKED: "bg-rose-600 text-white",
 };
 
-const FALLBACK_IMG = "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=400&q=80";
+const FALLBACK_IMG = "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&q=80";
 
 function lkr(n: number | null | undefined) {
   return n == null ? "Contact for pricing" : `LKR ${Number(n).toLocaleString()}`;
 }
 
 function ServiceCard({ service }: { service: ServiceItem }) {
-  const { requireAuth } = useAuth();
-  const router = useRouter();
-  const bookingHref = `/booking/${service.id}`;
-
-  const handleBook = () => {
-    if (requireAuth(bookingHref)) {
-      router.push(bookingHref);
-    }
-  };
-
+  const img = service.coverImage || service.image || FALLBACK_IMG;
   return (
-    <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
-      <Link href={`/services/${service.id}`} className="relative block h-44 overflow-hidden">
-        <img src={service.image || FALLBACK_IMG} alt={service.title} className="w-full h-full object-cover" />
-        <span className={`absolute top-2.5 left-2.5 text-[10px] font-bold px-2 py-0.5 rounded ${badgeConfig[String(service.badge).toUpperCase()] ?? "bg-green-600 text-white"}`}>
-          {String(service.badge).toLowerCase()}
-        </span>
+    <div className="group flex flex-col overflow-hidden rounded-3xl border border-[#e8dcc8] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+      <Link href={`/services/${service.id}`} className="relative block h-52 overflow-hidden">
+        <img src={img} alt={service.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+        <div className="absolute left-3 top-3 flex gap-2">
+          <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold shadow ${badgeConfig[String(service.badge).toUpperCase()] ?? "bg-emerald-600 text-white"}`}>{String(service.badge).toLowerCase()}</span>
+          {service.isFeatured ? <span className="rounded-full bg-[#cba85a] px-2.5 py-0.5 text-[10px] font-bold text-white shadow">Featured</span> : null}
+        </div>
       </Link>
 
-      <div className="p-3 flex flex-col flex-1">
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-1">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="#cba85a"><path d="M6 1l1.545 3.13L11 4.635l-2.5 2.435.59 3.44L6 8.885l-3.09 1.625.59-3.44L1 4.635l3.455-.505z" /></svg>
-            <span className="text-xs font-bold" style={{ color: "#0f5b47" }}>{Number(service.rating ?? 0).toFixed(1)}</span>
-            <span className="text-[11px] text-gray-500">({service.reviewCount ?? 0})</span>
-          </div>
-          {service.category ? <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-[#e8dcc8] text-[#0f5b47]">{service.category}</span> : null}
+      <div className="flex flex-1 flex-col p-4">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="flex items-center gap-1 text-xs font-bold text-[#0f5b47]"><Star className="h-3.5 w-3.5 fill-[#cba85a] text-[#cba85a]" /> {Number(service.rating ?? 0).toFixed(1)} <span className="font-normal text-gray-400">({service.reviewCount ?? 0})</span></span>
+          {service.category ? <span className="rounded-full bg-[#e8dcc8] px-2 py-0.5 text-[10px] font-medium text-[#0f5b47]">{service.category}</span> : null}
+        </div>
+        <Link href={`/services/${service.id}`}><h3 className="font-serif text-lg leading-snug text-[#0f5b47] hover:underline">{service.title}</h3></Link>
+        <p className="mt-0.5 text-xs text-gray-500">{service.vendorName}</p>
+        <div className="mt-1 flex flex-wrap gap-3 text-[11px] text-gray-500">
+          {service.location ? <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {service.location}</span> : null}
+          {service.capacity ? <span className="flex items-center gap-1"><BadgeCheck className="h-3 w-3" /> {service.capacity} guests</span> : null}
         </div>
 
-        <Link href={`/services/${service.id}`}>
-          <h3 className="text-sm font-bold mb-1 leading-snug hover:underline" style={{ color: "#0f5b47" }}>{service.title}</h3>
-        </Link>
-        <p className="text-[11px] text-gray-600 mb-0.5">{service.vendorName}</p>
-        {service.location ? <p className="text-[11px] text-gray-600 mb-3">📍 {service.location}</p> : <div className="mb-3" />}
-
-        <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-gray-100">
+        <div className="mt-auto flex items-center justify-between gap-2 border-t border-[#f0e6d6] pt-3">
           <div>
-            <p className="text-[10px] text-gray-500">Starting at</p>
-            <p className="text-sm font-bold" style={{ color: "#cba85a" }}>{lkr(service.discountedPrice ?? service.basePrice)}</p>
+            <p className="text-[10px] text-gray-400">Starting at</p>
+            <p className="text-base font-bold text-[#cba85a]">{lkr(service.discountedPrice ?? service.basePrice)}</p>
           </div>
-          <button onClick={handleBook} className="text-white text-[11px] font-semibold px-3 py-2 rounded-lg transition-colors" style={{ backgroundColor: "#0f5b47" }}>
-            Book Now
-          </button>
+          <div className="flex gap-1.5">
+            <Link href={`/services/${service.id}`} className="rounded-xl border border-[#0f5b47] px-3 py-2 text-xs font-semibold text-[#0f5b47] transition hover:bg-[#0f5b47]/5">Details</Link>
+            <Link href={`/services/${service.id}`} className="rounded-xl bg-[#0f5b47] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#0c4a3a]">Book Now</Link>
+          </div>
         </div>
       </div>
     </div>
@@ -87,10 +78,14 @@ export default function ServicesPage() {
   const [categories, setCategories] = useState<{ name: string; slug: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
   const [activeCategory, setActiveCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("recommended");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [location, setLocation] = useState("all");
+  const [priceRange, setPriceRange] = useState("all");
+  const [featuredOnly, setFeaturedOnly] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -115,80 +110,123 @@ export default function ServicesPage() {
     return () => { active = false; };
   }, []);
 
+  const locations = useMemo(
+    () => Array.from(new Set(services.map((s) => s.location).filter(Boolean))) as string[],
+    [services]
+  );
+
+  const priceBands: Record<string, [number, number]> = {
+    "0-100000": [0, 100000],
+    "100000-300000": [100000, 300000],
+    "300000-600000": [300000, 600000],
+    "600000+": [600000, Infinity],
+  };
+
   const filtered = useMemo(() => {
     let list = services.filter((s) => {
+      const price = s.discountedPrice ?? s.basePrice;
       const matchCat = activeCategory === "all" || s.categorySlug === activeCategory;
       const matchSearch = !search || s.title.toLowerCase().includes(search.toLowerCase()) || (s.vendorName ?? "").toLowerCase().includes(search.toLowerCase());
-      return matchCat && matchSearch;
+      const matchLoc = location === "all" || s.location === location;
+      const matchFeatured = !featuredOnly || s.isFeatured;
+      const band = priceRange === "all" ? null : priceBands[priceRange];
+      const matchPrice = !band || (price >= band[0] && price <= band[1]);
+      return matchCat && matchSearch && matchLoc && matchFeatured && matchPrice;
     });
     const price = (s: ServiceItem) => s.discountedPrice ?? s.basePrice;
     if (sort === "price-low") list = [...list].sort((a, b) => price(a) - price(b));
     if (sort === "price-high") list = [...list].sort((a, b) => price(b) - price(a));
     if (sort === "rating") list = [...list].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+    if (sort === "featured") list = [...list].sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured));
     return list;
-  }, [services, activeCategory, search, sort]);
+  }, [services, activeCategory, search, sort, location, priceRange, featuredOnly]);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#f8f6f1" }}>
-      <div className="px-6 md:px-8 pt-8 pb-1">
-        <h1 className="text-2xl font-bold" style={{ color: "#0f5b47" }}>All Services</h1>
-        <p className="text-sm mt-1" style={{ color: "#666" }}>
-          <span className="font-bold text-xs px-2 py-0.5 rounded mr-1" style={{ backgroundColor: "#e8dcc8", color: "#0f5b47" }}>{filtered.length}</span>
-          services available
-        </p>
-      </div>
-
-      <div className="px-6 md:px-8 pt-5 flex gap-2 flex-wrap">
-        <button onClick={() => setActiveCategory("all")} className="px-4 py-1.5 rounded-full text-sm font-medium border transition-all" style={activeCategory === "all" ? { backgroundColor: "#0f5b47", color: "white" } : { color: "#0f5b47", backgroundColor: "white" }}>
-          All Services
-        </button>
-        {categories.map((cat) => (
-          <button key={cat.slug} onClick={() => setActiveCategory(cat.slug)} className="px-4 py-1.5 rounded-full text-sm font-medium border transition-all" style={activeCategory === cat.slug ? { backgroundColor: "#0f5b47", color: "white" } : { color: "#0f5b47", backgroundColor: "white" }}>
-            {cat.name}
-          </button>
-        ))}
-      </div>
-
-      <div className="px-6 md:px-8 py-4 flex flex-wrap items-center gap-3 justify-between">
-        <div className="flex items-center bg-white border border-gray-300 rounded-lg px-3 gap-2 flex-1 min-w-50 max-w-sm">
-          <svg className="shrink-0" style={{ color: "#999" }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-          <input type="text" placeholder="Search services or vendors..." value={search} onChange={(e) => setSearch(e.target.value)} className="py-2 text-sm bg-transparent outline-none w-full placeholder-gray-500" style={{ color: "#0f5b47" }} />
+    <div className="min-h-screen bg-[#f8f6f1]">
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-[#0f5b47] via-[#11503f] to-[#1b6b52] text-white">
+        <div className="mx-auto max-w-7xl px-6 py-10">
+          <p className="text-xs uppercase tracking-[0.28em] text-white/70">Wedding Marketplace</p>
+          <h1 className="mt-2 font-serif text-3xl md:text-4xl">Discover premium wedding services</h1>
+          <p className="mt-2 max-w-2xl text-white/80">Halls, catering, photography and more — compare packages and book in minutes.</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <select value={sort} onChange={(e) => setSort(e.target.value)} className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none cursor-pointer" style={{ color: "#0f5b47" }}>
+      </div>
+
+      {/* Category chips */}
+      <div className="mx-auto flex max-w-7xl flex-wrap gap-2 px-6 pt-6">
+        <Chip active={activeCategory === "all"} onClick={() => setActiveCategory("all")}>All Services</Chip>
+        {categories.map((c) => <Chip key={c.slug} active={activeCategory === c.slug} onClick={() => setActiveCategory(c.slug)}>{c.name}</Chip>)}
+      </div>
+
+      {/* Search + filter toggle */}
+      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search services or vendors…" className="w-full rounded-full border border-[#e8dcc8] bg-white py-2.5 pl-10 pr-4 text-sm text-[#0f5b47] outline-none focus:border-[#cba85a]" />
+        </div>
+        <div className="flex items-center gap-2">
+          <select value={sort} onChange={(e) => setSort(e.target.value)} className="rounded-full border border-[#e8dcc8] bg-white px-4 py-2.5 text-sm text-[#0f5b47] outline-none">
             <option value="recommended">Sort: Recommended</option>
+            <option value="featured">Featured first</option>
             <option value="price-low">Price: Low to High</option>
             <option value="price-high">Price: High to Low</option>
             <option value="rating">Top Rated</option>
           </select>
-          <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-            <button onClick={() => setViewMode("grid")} title="Grid view" className="px-2.5 py-2" style={{ backgroundColor: viewMode === "grid" ? "#0f5b47" : "white", color: viewMode === "grid" ? "white" : "#999" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
-            </button>
-            <button onClick={() => setViewMode("list")} title="List view" className="px-2.5 py-2" style={{ backgroundColor: viewMode === "list" ? "#0f5b47" : "white", color: viewMode === "list" ? "white" : "#999" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
-            </button>
-          </div>
+          <button onClick={() => setShowFilters((v) => !v)} className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium ${showFilters ? "border-[#0f5b47] bg-[#0f5b47] text-white" : "border-[#e8dcc8] bg-white text-[#0f5b47]"}`}>
+            <SlidersHorizontal className="h-4 w-4" /> Filters
+          </button>
         </div>
       </div>
 
-      <div className={`px-6 md:px-8 pb-12 ${viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" : "flex flex-col gap-4 max-w-2xl"}`}>
-        {loading ? (
-          [0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="h-72 animate-pulse rounded-xl bg-gray-200" />)
-        ) : error ? (
-          <div className="col-span-3 text-center py-20 text-rose-600">
-            <p className="text-lg font-medium">Couldn’t load services</p>
-            <p className="text-sm mt-1">Please refresh the page.</p>
+      {/* Filter panel */}
+      {showFilters ? (
+        <div className="mx-auto max-w-7xl px-6 pb-2">
+          <div className="grid gap-3 rounded-2xl border border-[#e8dcc8] bg-white p-4 sm:grid-cols-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#0f5b47]">Location</span>
+              <select value={location} onChange={(e) => setLocation(e.target.value)} className="w-full rounded-xl border border-[#e8dcc8] px-3 py-2 text-sm text-[#0f5b47] outline-none">
+                <option value="all">All locations</option>
+                {locations.map((l) => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#0f5b47]">Price range (LKR)</span>
+              <select value={priceRange} onChange={(e) => setPriceRange(e.target.value)} className="w-full rounded-xl border border-[#e8dcc8] px-3 py-2 text-sm text-[#0f5b47] outline-none">
+                <option value="all">Any price</option>
+                <option value="0-100000">Under 100,000</option>
+                <option value="100000-300000">100,000 – 300,000</option>
+                <option value="300000-600000">300,000 – 600,000</option>
+                <option value="600000+">600,000+</option>
+              </select>
+            </label>
+            <label className="flex items-end gap-2 pb-1">
+              <input type="checkbox" checked={featuredOnly} onChange={(e) => setFeaturedOnly(e.target.checked)} className="h-5 w-5 rounded accent-[#0f5b47]" />
+              <span className="text-sm font-medium text-[#0f5b47]">Featured only</span>
+            </label>
           </div>
-        ) : filtered.length > 0 ? (
+        </div>
+      ) : null}
+
+      <div className="mx-auto max-w-7xl px-6 pb-2 pt-2 text-sm text-gray-500">
+        <span className="rounded-full bg-[#e8dcc8] px-2 py-0.5 text-xs font-bold text-[#0f5b47]">{filtered.length}</span> services available
+      </div>
+
+      {/* Grid */}
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 pb-14 sm:grid-cols-2 lg:grid-cols-3">
+        {loading ? (
+          [0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="h-80 animate-pulse rounded-3xl bg-gray-200" />)
+        ) : error ? (
+          <div className="col-span-full py-20 text-center text-rose-600"><p className="text-lg font-medium">Couldn’t load services</p><p className="mt-1 text-sm">Please refresh the page.</p></div>
+        ) : filtered.length ? (
           filtered.map((s) => <ServiceCard key={s.id} service={s} />)
         ) : (
-          <div className="col-span-3 text-center py-20" style={{ color: "#999" }}>
-            <p className="text-lg font-medium">No services found</p>
-            <p className="text-sm mt-1">Try a different category or search term</p>
-          </div>
+          <div className="col-span-full py-20 text-center text-gray-500"><p className="text-lg font-medium">No services found</p><p className="mt-1 text-sm">Try adjusting your filters or search.</p></div>
         )}
       </div>
     </div>
   );
+}
+
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button onClick={onClick} className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${active ? "bg-[#0f5b47] text-white" : "border border-[#e8dcc8] bg-white text-[#0f5b47] hover:bg-[#fbf7ef]"}`}>{children}</button>;
 }
