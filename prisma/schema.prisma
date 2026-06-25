@@ -1,0 +1,323 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
+  VENDOR
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum VendorBadge {
+  AVAILABLE
+  LIMITED
+  BOOKED
+}
+
+enum WeddingStage {
+  ENGAGEMENT
+  GIFT_EXCHANGE
+  MEHNDI
+  NIKAH
+  RECEPTION
+  WALIMA
+}
+
+enum DealType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  BUNDLE
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMED
+  BOOKING_PENDING
+  BOOKING_REJECTED
+  NEW_DEAL
+  SERVICE_AVAILABLE
+  REMINDER
+  REVIEW_REQUEST
+}
+
+// ============================================
+// CORE MODELS
+// ============================================
+
+model User {
+  id                    Int                  @id @default(autoincrement())
+  name                  String
+  email                 String               @unique
+  passwordHash          String
+  phone                 String?
+  profileImage          String?
+  role                  UserRole             @default(CUSTOMER)
+  isActive              Boolean              @default(true)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  // Customer relations
+  bookings              Booking[]
+  reviews               Review[]
+  weddingPlans          WeddingPlan[]
+  giftExchangeItems     GiftExchangeItem[]
+  notifications         Notification[]
+  savedVendors          SavedVendor[]
+  mehndiPlan            MehndiPlan?
+
+  // Vendor relations (if user is a vendor)
+  vendorProfile         Vendor?
+}
+
+model MehndiPlan {
+  id                    Int                  @id @default(autoincrement())
+  customerId            Int                  @unique
+  eventDate             DateTime?
+  guestCount            Int?
+  budget                Int?
+  selections            Json?                // { decorTheme, artist, artistContact, music, seating, foodStalls: [] }
+  checklist             Json?                // [{ id, label, done }]
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  customer              User                 @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id                    Int                  @id @default(autoincrement())
+  name                  String               @unique
+  slug                  String               @unique
+  description           String?
+  icon                  String?
+  image                 String?
+  isActive              Boolean              @default(true)
+  displayOrder          Int                  @default(0)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  vendors               Vendor[]
+  services              Service[]
+  deals                 Deal[]
+}
+
+model Vendor {
+  id                    Int                  @id @default(autoincrement())
+  userId                Int?                 @unique
+  categoryId            Int
+  businessName          String
+  description           String?
+  email                 String               @unique
+  phone                 String
+  location              String
+  address               String?
+  latitude              Float?
+  longitude             Float?
+  baseImage             String?
+  images                String[]             // Array of image URLs
+  rating                Float                @default(0)
+  reviewCount           Int                  @default(0)
+  isVerified            Boolean              @default(false)
+  isFeatured            Boolean              @default(false)
+  isActive              Boolean              @default(true)
+  badge                 VendorBadge          @default(AVAILABLE)
+  minPrice              Int?
+  maxPrice              Int?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  user                  User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  category              Category             @relation(fields: [categoryId], references: [id])
+  services              Service[]
+  packages              Package[]
+  bookings              Booking[]
+  deals                 Deal[]
+  reviews               Review[]
+  savedBy               SavedVendor[]
+}
+
+model Service {
+  id                    Int                  @id @default(autoincrement())
+  vendorId              Int
+  categoryId            Int
+  title                 String
+  slug                  String
+  description           String?
+  longDescription       String?
+  images                String[]             // Array of image URLs
+  basePrice             Int
+  discountedPrice       Int?
+  discountPercentage    Int?
+  isActive              Boolean              @default(true)
+  availability          Json?                // {daysOfWeek, blockedDates}
+  duration              Int?                 // in hours
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  vendor                Vendor               @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category              Category             @relation(fields: [categoryId], references: [id])
+  packages              Package[]
+  bookings              Booking[]
+  deals                 Deal[]
+  reviews               Review[]
+}
+
+model Package {
+  id                    Int                  @id @default(autoincrement())
+  serviceId             Int
+  vendorId              Int
+  name                  String
+  description           String?
+  price                 Int
+  discountedPrice       Int?
+  features              String[]             // Features included in package
+  duration              Int?                 // in hours
+  guestCapacity         Int?
+  isActive              Boolean              @default(true)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  service               Service              @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  vendor                Vendor               @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  bookings              Booking[]
+}
+
+model Booking {
+  id                    Int                  @id @default(autoincrement())
+  customerId            Int
+  vendorId              Int
+  serviceId             Int
+  packageId             Int?
+  eventDate             DateTime
+  eventTime             String?
+  guestCount            Int?
+  customRequests        String?
+  totalPrice            Int
+  discountApplied       Int?
+  finalPrice            Int
+  status                BookingStatus        @default(PENDING)
+  notes                 String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  customer              User                 @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor                Vendor               @relation(fields: [vendorId], references: [id])
+  service               Service              @relation(fields: [serviceId], references: [id])
+  package               Package?             @relation(fields: [packageId], references: [id], onDelete: SetNull)
+}
+
+model Deal {
+  id                    Int                  @id @default(autoincrement())
+  title                 String
+  description           String?
+  categoryId            Int?
+  vendorId              Int?
+  serviceId             Int?
+  image                 String?
+  images                String[]             // Array of images
+  discountType          DealType             @default(PERCENTAGE)
+  discountValue         Int                  // percentage or fixed amount
+  originalPrice         Int?
+  discountedPrice       Int?
+  discount              Int                  // calculated percentage
+  startDate             DateTime
+  endDate               DateTime
+  isActive              Boolean              @default(true)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  category              Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  vendor                Vendor?              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  service               Service?             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id                    Int                  @id @default(autoincrement())
+  customerId            Int
+  vendorId              Int
+  serviceId             Int?
+  rating                Int                  // 1-5
+  comment               String?
+  images                String[]             // Review images
+  isVerified            Boolean              @default(false)
+  helpfulCount          Int                  @default(0)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  customer              User                 @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor                Vendor               @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  service               Service?             @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+}
+
+model WeddingPlan {
+  id                    Int                  @id @default(autoincrement())
+  customerId            Int                  @unique
+  weddingDate           DateTime?
+  partnerName           String?
+  currentStage          WeddingStage         @default(ENGAGEMENT)
+  totalBudget           Int?
+  spentAmount           Int                  @default(0)
+  progressPercentage    Int                  @default(0)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  customer              User                 @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model GiftExchangeItem {
+  id                    Int                  @id @default(autoincrement())
+  customerId            Int
+  itemName              String
+  category              String               // Clothes, Jewelry, Perfume, etc.
+  quantity              Int                  @default(1)
+  estimatedCost         Int?
+  status                String               @default("PENDING")  // PENDING, ORDERED, RECEIVED
+  deliveryDate          DateTime?
+  trayNumber            Int?
+  notes                 String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  customer              User                 @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model SavedVendor {
+  id                    Int                  @id @default(autoincrement())
+  customerId            Int
+  vendorId              Int
+  createdAt             DateTime             @default(now())
+
+  customer              User                 @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor                Vendor               @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, vendorId])
+}
+
+model Notification {
+  id                    Int                  @id @default(autoincrement())
+  userId                Int
+  title                 String
+  message               String?
+  type                  NotificationType
+  relatedId             Int?                 // booking id, deal id, etc
+  isRead                Boolean              @default(false)
+  createdAt             DateTime             @default(now())
+  readAt                DateTime?
+
+  user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
