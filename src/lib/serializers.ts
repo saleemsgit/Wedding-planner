@@ -121,6 +121,7 @@ export function serializeBooking(booking: Record<string, any>) {
     customerId: booking.customerId,
     customerName: booking.customer?.name ?? null,
     customerEmail: booking.customer?.email ?? null,
+    customerPhone: booking.customer?.phone ?? null,
     vendorId: booking.vendorId,
     vendorName: booking.vendor?.businessName ?? null,
     serviceId: booking.serviceId,
