@@ -53,16 +53,28 @@ export async function POST(request: Request) {
       include: { customer: true, vendor: true, service: true, package: true },
     });
 
-    // Best-effort notification for the customer
+    // Best-effort notifications: one for the customer, one for every admin.
     try {
-      await prisma.notification.create({
-        data: {
-          userId: auth.id,
-          title: "Booking received",
-          message: `Your booking for ${service.title} is pending confirmation.`,
-          type: "BOOKING_PENDING",
-          relatedId: booking.id,
-        },
+      const customerName = booking.customer?.name ?? "A customer";
+      const pkgLabel = booking.package?.name ? ` (${booking.package.name})` : "";
+      const admins = await prisma.user.findMany({ where: { role: "ADMIN", isActive: true }, select: { id: true } });
+      await prisma.notification.createMany({
+        data: [
+          {
+            userId: auth.id,
+            title: "Booking received",
+            message: `Your booking for ${service.title} is pending confirmation.`,
+            type: "BOOKING_PENDING",
+            relatedId: booking.id,
+          },
+          ...admins.map((a) => ({
+            userId: a.id,
+            title: "New booking",
+            message: `${customerName} booked ${service.title}${pkgLabel} for ${eventDateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.`,
+            type: "BOOKING_PENDING" as const,
+            relatedId: booking.id,
+          })),
+        ],
       });
     } catch (e) {
       console.error("notification failed", e);
